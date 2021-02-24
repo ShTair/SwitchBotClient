@@ -2,7 +2,6 @@
 using SwitchBot.Models.Devices;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
@@ -23,20 +22,32 @@ namespace SwitchBot
             _token = token;
         }
 
-        public async Task<IEnumerable<IDevice>> GetDevicesAsync()
+        public async Task<List<DeviceBase>> GetDevicesAsync()
         {
             var uri = new Uri(_base, "/v1.0/devices");
             using var client = CreateClient();
             using var message = await client.GetAsync(uri);
+
             var result = await message.Content.ReadFromJsonAsync<Result>();
-            return Enumerable.Empty<IDevice>()
-                .Concat(result!.Body!.Devices!)
-                .Concat(result!.Body.InfraredRemotes!)
-                .Select(device => device switch
+            var body = result!.Body!;
+
+            var devices = new List<DeviceBase>(body.Devices!.Count + body.InfraredRemotes!.Count);
+            foreach (var device in body.Devices)
+            {
+                devices.Add(device.DeviceType switch
                 {
-                    InfraredRemote { RemoteType: "TV" } temp => new Television(temp),
                     _ => device,
                 });
+            }
+            foreach (var device in body.InfraredRemotes)
+            {
+                devices.Add(device.RemoteType switch
+                {
+                    "TV" => new Television(device),
+                    _ => device,
+                });
+            }
+            return devices;
         }
 
         public async Task GetDeviceStatusAsync(string deviceId)
@@ -59,7 +70,7 @@ namespace SwitchBot
             var content = message.Content.ReadAsStringAsync();
         }
 
-        public Task SendCommandAsync(IDevice device, string command, string parameter)
+        public Task SendCommandAsync(DeviceBase device, string command, string parameter)
             => SendCommandAsync(device.DeviceId, command, parameter);
 
         private HttpClient CreateClient()
