@@ -2,9 +2,11 @@
 using SwitchBot.Models.Devices;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace SwitchBot
@@ -22,44 +24,27 @@ namespace SwitchBot
             _token = token;
         }
 
-        public async Task<List<DeviceBase>> GetDevicesAsync()
+        public async Task<IEnumerable<IDevice>> GetDevicesAsync()
         {
             var uri = new Uri(_base, "/v1.0/devices");
             using var client = CreateClient();
             using var message = await client.GetAsync(uri);
-
-            var result = await message.Content.ReadFromJsonAsync<Result>();
+            var result = await message.Content.ReadFromJsonAsync<Result<DevicesBody>>();
             var body = result!.Body!;
-
-            var devices = new List<DeviceBase>(body.Devices!.Count + body.InfraredRemotes!.Count);
-            foreach (var device in body.Devices)
-            {
-                devices.Add(device.DeviceType switch
-                {
-                    _ => device,
-                });
-            }
-            foreach (var device in body.InfraredRemotes)
-            {
-                devices.Add(device.RemoteType switch
-                {
-                    "TV" => new Television(device),
-                    _ => device,
-                });
-            }
-            return devices;
+            return body.Devices.Cast<IDevice>().Concat(body.InfraredRemotes);
         }
 
-        public async Task GetDeviceStatusAsync(string deviceId)
+        public async Task GetDeviceStatusAsync<T>(string deviceId) where T : Device
         {
             var uri = new Uri(_base, $"/v1.0/devices/{deviceId}/status");
             using var client = CreateClient();
             using var message = await client.GetAsync(uri);
-            var result = await message.Content.ReadAsStringAsync();
+            var options = new JsonSerializerOptions();
+            var result = await message.Content.ReadFromJsonAsync<Result<T>>();
         }
 
-        public Task GetDeviceStatusAsync(Device device)
-            => GetDeviceStatusAsync(device.DeviceId);
+        public Task GetDeviceStatusAsync<T>(T device) where T : Device
+            => GetDeviceStatusAsync<T>(device.DeviceId);
 
         public async Task SendCommandAsync(string deviceId, string command, string parameter)
         {
@@ -70,7 +55,7 @@ namespace SwitchBot
             var content = message.Content.ReadAsStringAsync();
         }
 
-        public Task SendCommandAsync(DeviceBase device, string command, string parameter)
+        public Task SendCommandAsync(IDevice device, string command, string parameter)
             => SendCommandAsync(device.DeviceId, command, parameter);
 
         private HttpClient CreateClient()

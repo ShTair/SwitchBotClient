@@ -2,8 +2,18 @@
 {
     public class Curtain : Device
     {
-        public bool Moving { get; set; }
+        public string[] CurtainDevicesIds { get; set; } = default!;
 
-        public int SlidePosition { get; set; }
+        public bool Calibrate { get; set; }
+
+        public bool Group { get; set; }
+
+        public bool Master { get; set; }
+
+        public string OpenDirection { get; set; } = default!;
+
+        public bool? Moving { get; set; }
+
+        public int? SlidePosition { get; set; }
     }
 }
