@@ -13,6 +13,8 @@ namespace SwitchBot.Models.Devices
 
     public class Device : IDevice
     {
+        protected SwitchBotClient Client { get; private set; } = default!;
+
         public string DeviceId { get; set; } = default!;
 
         public string DeviceName { get; set; } = default!;
@@ -22,6 +24,12 @@ namespace SwitchBot.Models.Devices
         public bool EnableCloudService { get; set; }
 
         public string HubDeviceId { get; set; } = default!;
+
+        public Device() { }
+
+        public Device(SwitchBotClient client, string deviceId) => (Client, DeviceId) = (client, deviceId);
+
+        internal void SetClient(SwitchBotClient client) => Client = client;
     }
 
     class DevicesJsonConverter : JsonConverter<List<Device>>

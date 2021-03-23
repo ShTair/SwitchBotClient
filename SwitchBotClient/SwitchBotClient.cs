@@ -31,20 +31,20 @@ namespace SwitchBot
             using var message = await client.GetAsync(uri);
             var result = await message.Content.ReadFromJsonAsync<Result<DevicesBody>>();
             var body = result!.Body!;
-            return body.Devices.Cast<IDevice>().Concat(body.InfraredRemotes);
+            foreach (var device in body.Devices) device.SetClient(this);
+            foreach (var device in body.InfraredRemotes) device.SetClient(this);
+            return body.Devices.Cast<IDevice>().Concat(body.InfraredRemotes).ToList();
         }
 
-        public async Task GetDeviceStatusAsync<T>(string deviceId) where T : Device
+        public async Task<T> GetDeviceStatusAsync<T>(string deviceId) where T : notnull
         {
             var uri = new Uri(_base, $"/v1.0/devices/{deviceId}/status");
             using var client = CreateClient();
             using var message = await client.GetAsync(uri);
             var options = new JsonSerializerOptions();
             var result = await message.Content.ReadFromJsonAsync<Result<T>>();
+            return result!.Body;
         }
-
-        public Task GetDeviceStatusAsync<T>(T device) where T : Device
-            => GetDeviceStatusAsync<T>(device.DeviceId);
 
         public async Task SendCommandAsync(string deviceId, string command, string parameter)
         {

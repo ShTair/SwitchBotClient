@@ -8,6 +8,8 @@ namespace SwitchBot.Models.Devices
 {
     public class InfraredRemote : IDevice
     {
+        protected SwitchBotClient Client { get; private set; } = default!;
+
         public string DeviceId { get; } = default!;
 
         public string DeviceName { get; } = default!;
@@ -15,6 +17,12 @@ namespace SwitchBot.Models.Devices
         public string RemoteType { get; } = default!;
 
         public string HubDeviceId { get; } = default!;
+
+        public InfraredRemote() { }
+
+        public InfraredRemote(SwitchBotClient client, string deviceId) => (Client, DeviceId) = (client, deviceId);
+
+        internal void SetClient(SwitchBotClient client) => Client = client;
     }
 
     class InfraredRemoteJsonConverter : JsonConverter<List<InfraredRemote>>
